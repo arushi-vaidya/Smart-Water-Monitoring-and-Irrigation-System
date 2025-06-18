@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../widgets/monitoring_card.dart';
 import '../widgets/header_widget.dart';
 import '../widgets/animated_background.dart';
-import '../services/email_service.dart';
+import '../services/thingspeak_service.dart';
+import '../models/sensor_data.dart';
 import 'chart_screen.dart';
+import 'dart:async'; // For Timer
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -11,19 +13,29 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  final String recipientEmail =
-      "admin@watermonitoring.com"; // Replace with your email
   late AnimationController _cardAnimationController;
   late AnimationController _buttonAnimationController;
   late Animation<double> _cardFadeAnimation;
   late Animation<Offset> _cardSlideAnimation;
   late Animation<double> _buttonScaleAnimation;
+  
+  // Alert monitoring variables
+  Timer? _monitoringTimer;
+  bool _isAlertShown = false;
+  double _currentTemperature =00.0; // Mock current temperature
+  double _currentWaterLevel = 00.0; // Mock current water level
+  
+  // Alert thresholds
+  static const double TEMPERATURE_THRESHOLD = 50;
+  static const double WATER_LEVEL_THRESHOLD = 15;
 
   @override
   void initState() {
     super.initState();
     _initAnimations();
     _startAnimations();
+    _startMonitoring();
+    _checkSensorValues();
   }
 
   void _initAnimations() {
@@ -69,10 +81,161 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
+  void _startMonitoring() {
+    // Start periodic monitoring every 30 seconds
+    _monitoringTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+      _checkSensorValues();
+    });
+    
+    // Initial check after 5 seconds
+    Future.delayed(Duration(seconds: 5), () {
+      _checkSensorValues();
+    });
+  }
+
+  Future<void> _checkSensorValues() async {
+  try {
+    final waterLevelResponse = await ThingSpeakService.getFieldData('1'); // field1 = Water level
+    final temperatureResponse = await ThingSpeakService.getFieldData('3'); // field2 = Temperature
+
+    setState(() {
+      if (waterLevelResponse.feeds.isNotEmpty) {
+        _currentWaterLevel = waterLevelResponse.feeds.last.value;
+      }
+      if (temperatureResponse.feeds.isNotEmpty) {
+        _currentTemperature = temperatureResponse.feeds.last.value;
+      }
+    });
+
+    // Check thresholds
+    bool temperatureAlert = _currentTemperature > TEMPERATURE_THRESHOLD;
+    bool waterLevelAlert = _currentWaterLevel < WATER_LEVEL_THRESHOLD;
+
+    if ((temperatureAlert || waterLevelAlert) && !_isAlertShown) {
+      _showAlertNotification(temperatureAlert, waterLevelAlert);
+    }
+
+  } catch (e) {
+    print('Error fetching sensor data: $e');
+  }
+}
+
+
+  void _showAlertNotification(bool temperatureAlert, bool waterLevelAlert) {
+    _isAlertShown = true;
+    
+    String alertMessage = '';
+    List<String> alerts = [];
+    
+    if (temperatureAlert) {
+      alerts.add('Temperature is critically high: ${_currentTemperature.toStringAsFixed(1)}°C');
+      
+    }
+    if (waterLevelAlert) {
+      print('Fetched temperature: $_currentTemperature');
+
+      alerts.add('Water level is critically low: ${_currentWaterLevel.toStringAsFixed(1)}cm');
+    }
+    
+    alertMessage = alerts.join('\n');
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.red,
+                  size: 24,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Critical Alert!',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Immediate attention required:',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              SizedBox(height: 8),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.red.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  alertMessage,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Detected at: ${DateTime.now().toString().substring(0, 19)}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _isAlertShown = false;
+              },
+              child: Text(
+                'Dismiss',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _cardAnimationController.dispose();
     _buttonAnimationController.dispose();
+    _monitoringTimer?.cancel();
     super.dispose();
   }
 
@@ -89,80 +252,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 // Enhanced Header Section
                 HeaderWidget(),
-
-                // Alert Button with animation
-                AnimatedBuilder(
-                  animation: _buttonScaleAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _buttonScaleAnimation.value,
-                      child: Container(
-                        margin: EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.red[400]!, Colors.red[600]!],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => _sendAlert(context),
-                              borderRadius: BorderRadius.circular(20),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 24,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Icon(
-                                        Icons.email_outlined,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Text(
-                                      'Send Emergency Alert',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
                 // Status indicators
                 Container(
                   margin: EdgeInsets.symmetric(horizontal: 20),
@@ -183,9 +272,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       _buildStatusIndicator(
                         'All Systems',
-                        'Online',
-                        Colors.green,
-                        Icons.check_circle,
+                        _getSystemStatus(),
+                        _getSystemStatusColor(),
+                        _getSystemStatusIcon(),
                       ),
                       Container(width: 1, height: 30, color: Colors.grey[300]),
                       _buildStatusIndicator(
@@ -266,7 +355,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 MonitoringCard(
                                   title: 'Water Level',
                                   icon: Icons.waves,
-                                  color: Color(0xFF2196F3),
+                                  color: _currentWaterLevel < WATER_LEVEL_THRESHOLD 
+                                      ? Colors.red 
+                                      : Color(0xFF2196F3),
                                   unit: 'cm',
                                   fieldNumber: '1',
                                   onTapped: () => _navigateToChart(
@@ -294,7 +385,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 MonitoringCard(
                                   title: 'Temperature',
                                   icon: Icons.device_thermostat,
-                                  color: Color(0xFFFF9800),
+                                  color: _currentTemperature > TEMPERATURE_THRESHOLD 
+                                      ? Colors.red 
+                                      : Color(0xFFFF9800),
                                   unit: '°C',
                                   fieldNumber: '3',
                                   onTapped: () => _navigateToChart(
@@ -335,6 +428,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  String _getSystemStatus() {
+    bool hasAlert = _currentTemperature > TEMPERATURE_THRESHOLD || 
+                   _currentWaterLevel < WATER_LEVEL_THRESHOLD;
+    return hasAlert ? 'Alert' : 'Online';
+  }
+
+  Color _getSystemStatusColor() {
+    bool hasAlert = _currentTemperature > TEMPERATURE_THRESHOLD || 
+                   _currentWaterLevel < WATER_LEVEL_THRESHOLD;
+    return hasAlert ? Colors.red : Colors.green;
+  }
+
+  IconData _getSystemStatusIcon() {
+    bool hasAlert = _currentTemperature > TEMPERATURE_THRESHOLD || 
+                   _currentWaterLevel < WATER_LEVEL_THRESHOLD;
+    return hasAlert ? Icons.warning : Icons.check_circle;
   }
 
   Widget _buildStatusIndicator(
@@ -390,35 +501,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _sendAlert(BuildContext context) async {
-    try {
-      await EmailService.sendAlertEmail(
-        recipientEmail: recipientEmail,
-        subject: 'Water Monitoring System Alert',
-        body:
-            '''
-Dear Administrator,
-
-This is an automated alert from the Water Monitoring System.
-
-Please check the current water quality parameters and take necessary action if required.
-
-Timestamp: ${DateTime.now().toString()}
-
-Best regards,
-Water Monitoring System
-        ''',
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Email client opened successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
-    }
-  }
+      String alertDetails = '';
+      if (_currentTemperature > TEMPERATURE_THRESHOLD) {
+        alertDetails += 'Temperature Alert: ${_currentTemperature.toStringAsFixed(1)}°C (Threshold: $TEMPERATURE_THRESHOLD°C)\n';
+      }
+      if (_currentWaterLevel < WATER_LEVEL_THRESHOLD) {
+        alertDetails += 'Water Level Alert: ${_currentWaterLevel.toStringAsFixed(1)}cm (Threshold: $WATER_LEVEL_THRESHOLD cm)\n';
+      }
+  } 
 }
