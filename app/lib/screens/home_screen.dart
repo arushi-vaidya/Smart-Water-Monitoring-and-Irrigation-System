@@ -384,9 +384,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 MonitoringCard(
                                   title: 'Humidity',
                                   icon: Icons.device_thermostat,
-                                  color: _currentMoisture > MOISTURE_THRESHOLD 
-                                      ? Colors.red 
-                                      : Color(0xFFFF9800),
+                                  color: Color.fromARGB(255, 94, 81, 107),
                                   unit: '%',
                                   fieldNumber: '3',
                                   onTapped: () => _navigateToChart(
@@ -400,7 +398,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 MonitoringCard(
                                   title: 'Moisture',
                                   icon: Icons.opacity,
-                                  color: Color(0xFF9C27B0),
+                                  color: _currentMoisture > MOISTURE_THRESHOLD 
+                                      ? Colors.red 
+                                      : Color(0xFFFF9800),
                                   unit: '%',
                                   fieldNumber: '4',
                                   onTapped: () => _navigateToChart(
