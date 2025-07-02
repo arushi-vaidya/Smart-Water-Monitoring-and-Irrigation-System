@@ -22,11 +22,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // Alert monitoring variables
   Timer? _monitoringTimer;
   bool _isAlertShown = false;
-  double _currentTemperature =00.0; // Mock current temperature
+  double _currentMoisture =00.0; // Mock current temperature
   double _currentWaterLevel = 00.0; // Mock current water level
   
   // Alert thresholds
-  static const double TEMPERATURE_THRESHOLD = 50;
+  static const double MOISTURE_THRESHOLD = 15;
   static const double WATER_LEVEL_THRESHOLD = 15;
 
   @override
@@ -96,19 +96,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _checkSensorValues() async {
   try {
     final waterLevelResponse = await ThingSpeakService.getFieldData('1'); // field1 = Water level
-    final temperatureResponse = await ThingSpeakService.getFieldData('3'); // field2 = Temperature
+    final MoistureResponse = await ThingSpeakService.getFieldData('4'); // field2 = Moisture
 
     setState(() {
       if (waterLevelResponse.feeds.isNotEmpty) {
         _currentWaterLevel = waterLevelResponse.feeds.last.value;
       }
-      if (temperatureResponse.feeds.isNotEmpty) {
-        _currentTemperature = temperatureResponse.feeds.last.value;
+      if (MoistureResponse.feeds.isNotEmpty) {
+        _currentMoisture = MoistureResponse.feeds.last.value;
       }
     });
 
     // Check thresholds
-    bool temperatureAlert = _currentTemperature > TEMPERATURE_THRESHOLD;
+    bool temperatureAlert = _currentMoisture < MOISTURE_THRESHOLD;
     bool waterLevelAlert = _currentWaterLevel < WATER_LEVEL_THRESHOLD;
 
     if ((temperatureAlert || waterLevelAlert) && !_isAlertShown) {
@@ -128,11 +128,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     List<String> alerts = [];
     
     if (temperatureAlert) {
-      alerts.add('Temperature is critically high: ${_currentTemperature.toStringAsFixed(1)}°C');
+      alerts.add('Mosture is critically low: ${_currentMoisture.toStringAsFixed(1)}%');
       
     }
     if (waterLevelAlert) {
-      print('Fetched temperature: $_currentTemperature');
 
       alerts.add('Water level is critically low: ${_currentWaterLevel.toStringAsFixed(1)}cm');
     }
@@ -385,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 MonitoringCard(
                                   title: 'Temperature',
                                   icon: Icons.device_thermostat,
-                                  color: _currentTemperature > TEMPERATURE_THRESHOLD 
+                                  color: _currentMoisture > MOISTURE_THRESHOLD 
                                       ? Colors.red 
                                       : Color(0xFFFF9800),
                                   unit: '°C',
@@ -431,19 +430,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   String _getSystemStatus() {
-    bool hasAlert = _currentTemperature > TEMPERATURE_THRESHOLD || 
+    bool hasAlert = _currentMoisture > MOISTURE_THRESHOLD || 
                    _currentWaterLevel < WATER_LEVEL_THRESHOLD;
     return hasAlert ? 'Alert' : 'Online';
   }
 
   Color _getSystemStatusColor() {
-    bool hasAlert = _currentTemperature > TEMPERATURE_THRESHOLD || 
+    bool hasAlert = _currentMoisture > MOISTURE_THRESHOLD || 
                    _currentWaterLevel < WATER_LEVEL_THRESHOLD;
     return hasAlert ? Colors.red : Colors.green;
   }
 
   IconData _getSystemStatusIcon() {
-    bool hasAlert = _currentTemperature > TEMPERATURE_THRESHOLD || 
+    bool hasAlert = _currentMoisture > MOISTURE_THRESHOLD|| 
                    _currentWaterLevel < WATER_LEVEL_THRESHOLD;
     return hasAlert ? Icons.warning : Icons.check_circle;
   }
@@ -502,8 +501,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _sendAlert(BuildContext context) async {
       String alertDetails = '';
-      if (_currentTemperature > TEMPERATURE_THRESHOLD) {
-        alertDetails += 'Temperature Alert: ${_currentTemperature.toStringAsFixed(1)}°C (Threshold: $TEMPERATURE_THRESHOLD°C)\n';
+      if (_currentMoisture > MOISTURE_THRESHOLD) {
+        alertDetails += 'Temperature Alert: ${_currentMoisture.toStringAsFixed(1)}°C (Threshold: $MOISTURE_THRESHOLD°C)\n';
       }
       if (_currentWaterLevel < WATER_LEVEL_THRESHOLD) {
         alertDetails += 'Water Level Alert: ${_currentWaterLevel.toStringAsFixed(1)}cm (Threshold: $WATER_LEVEL_THRESHOLD cm)\n';
