@@ -1,6 +1,6 @@
 # 💧 Smart Water Monitoring and Irrigation System
 
-A complete IoT solution for monitoring water levels and soil conditions in real-time. This system combines an Arduino-based setup for sensor data collection with a modern Flutter app that provides a live dashboard, alerts, and data visualization.
+A complete IoT solution for monitoring water levels and soil conditions in real-time. This system combines an ESP32-based setup for sensor data collection with a modern Flutter app that provides a live dashboard, alerts, and data visualization.
 
 ---
 
@@ -46,7 +46,7 @@ A complete IoT solution for monitoring water levels and soil conditions in real-
 
 ---
 
-## Hardware FUnctionaliy
+## Hardware Functionaliy
 
 1. When tank level is 0, the buzzer is sounded.
 2. If Soil Moisture reading is less than 25% and tank has water, the pump starts and irrigates the soil.
@@ -93,11 +93,3 @@ A complete IoT solution for monitoring water levels and soil conditions in real-
 
 ---
 
-## 🛡️ Alert System
-
-The app includes an **Emergency Alert** button. Tapping it will:
-- Automatically open the device’s default email client.
-- Populate it with a predefined message and recipient (configurable).
-- Notify the admin to check the water system immediately.
-
----
