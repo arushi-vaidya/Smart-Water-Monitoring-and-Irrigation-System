@@ -2,15 +2,14 @@
 #include <HTTPClient.h> 
 #include <LiquidCrystal_I2C.h> 
 #include "DHT.h" 
- 
+
+//Initialising
 const int pumpPin = 26; // GPIO pin to control relay module for pump 
 bool isTankLow = false; // Track if tank is low 
 bool pumpRunning = false; // Track pump state
 unsigned long pumpStartTime = 0; // Track when pump started
 const unsigned long PUMP_DURATION = 5000; // 5 seconds pump duration
- 
-// LCD at I2C address 0x27 
-LiquidCrystal_I2C lcd(0x27, 16, 2);  
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // LCD at I2C address 0x27 
  
 // DHT setup 
 #define DHTPIN 33          
@@ -101,7 +100,7 @@ void readDHT() {
     return; 
   } 
  
-  Serial.printf("Humidity: %.1f%%, Temperature: %.1f°C\n", humidity, temperature + 23); 
+  Serial.printf("Humidity: %.1f%%, Temperature: %.1f°C\n", humidity, temperature); 
  
   // Only update LCD if pump is not running to avoid conflicts
   if (!pumpRunning) {
@@ -117,9 +116,9 @@ void readDHT() {
 } 
  
 void controlPump() { 
-  int actualMoisture = moisture * 2; // Calculate actual moisture percentage
+  int actualMoisture = moisture;
   
-  Serial.printf("DEBUG: Moisture = %d%%, Tank Low = %s, Pump Running = %s\n", 
+  Serial.printf("Moisture = %d%%, Tank Low = %s, Pump Running = %s\n", 
                 actualMoisture, isTankLow ? "YES" : "NO", pumpRunning ? "YES" : "NO");
   
   // Check if pump should start - soil is dry (moisture < 25%) and tank has water
@@ -290,7 +289,7 @@ void readSoil() {
   if (!pumpRunning) {
     lcd.clear(); 
     lcd.print("Moisture: "); 
-    lcd.print(moisture * 2); 
+    lcd.print(moisture); 
     lcd.print("%"); 
     delay(2000); 
   }
@@ -303,7 +302,7 @@ void sendToThingSpeak() {
  
     String postData = "api_key=" + apiKey; 
     postData += "&field1=" + String(waterLevel); 
-    postData += "&field2=" + String(temperature); // Adjusted temperature
+    postData += "&field2=" + String(temperature);
     postData += "&field3=" + String(humidity); 
     postData += "&field4=" + String(moisture); // Adjusted moisture
  
@@ -322,7 +321,7 @@ void sendToThingSpeak() {
 void alarm(int times) { 
   for (int i = 0; i < times; i++) { 
     digitalWrite(buzzer, HIGH); 
-    delay(200); // Shorter delay to avoid blocking
+    delay(200); 
     digitalWrite(buzzer, LOW); 
     delay(200); 
   } 
