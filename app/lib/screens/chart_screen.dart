@@ -431,9 +431,9 @@ class _ChartScreenState extends State<ChartScreen> {
       case '1':
         return 'cm';
       case '2':
-        return '%';
-      case '3':
         return '°C';
+      case '3':
+        return '%';
       case '4':
         return '%';
       default:

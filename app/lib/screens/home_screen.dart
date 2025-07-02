@@ -375,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   fieldNumber: '2',
                                   onTapped: () => _navigateToChart(
                                     context,
-                                    'Humidity',
+                                    'Temparature',
                                     '2',
                                     Color(0xFF4CAF50),
                                   ),
@@ -389,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   fieldNumber: '3',
                                   onTapped: () => _navigateToChart(
                                     context,
-                                    'Temperature',
+                                    'Humidity',
                                     '3',
                                     Color(0xFFFF9800),
                                   ),
