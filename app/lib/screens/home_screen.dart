@@ -368,10 +368,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   delay: 0,
                                 ),
                                 MonitoringCard(
-                                  title: 'Humidity',
+                                  title: 'Temparature',
                                   icon: Icons.water_drop_outlined,
                                   color: Color(0xFF4CAF50),
-                                  unit: '%',
+                                  unit: '°C',
                                   fieldNumber: '2',
                                   onTapped: () => _navigateToChart(
                                     context,
@@ -382,12 +382,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   delay: 200,
                                 ),
                                 MonitoringCard(
-                                  title: 'Temperature',
+                                  title: 'Humidity',
                                   icon: Icons.device_thermostat,
                                   color: _currentMoisture > MOISTURE_THRESHOLD 
                                       ? Colors.red 
                                       : Color(0xFFFF9800),
-                                  unit: '°C',
+                                  unit: '%',
                                   fieldNumber: '3',
                                   onTapped: () => _navigateToChart(
                                     context,
